@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Q&A Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --background-color: #f8fafc;
+            --text-color: #1e293b;
+            --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            color: white;
+            text-align: center;
+            padding: 40px 20px;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .question-form {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 30px;
+        }
+
+        .question-form h2 {
+            margin-top: 0;
+            color: var(--text-color);
+            font-weight: 600;
+        }
+
+        .question-form input, 
+        .question-form textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .question-form input:focus, 
+        .question-form textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .questions-list {
+            display: grid;
+            gap: 20px;
+        }
+
+        .question-item {
+            background-color: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            transition: transform 0.2s;
+        }
+
+        .question-item:hover {
+            transform: translateY(-2px);
+        }
+
+        .question-item.answered {
+            background-color: #f0f9ff;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .question-item h3 {
+            margin-top: 0;
+            color: var(--text-color);
+            font-weight: 600;
+        }
+
+        .answer-form {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #e2e8f0;
+            display: none;
+        }
+
+        .answer-form textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .password-input {
+            margin-bottom: 10px;
+            padding: 8px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+        }
+
+        .timestamp {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .error-message {
+            color: #dc2626;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Modern Q&A Platform</h1>
+    </div>
+    <div class="container">
+        <div class="question-form">
+            <h2>Ask a Question</h2>
+            <input type="text" id="questionTitle" placeholder="What's your question?">
+            <textarea id="questionDescription" placeholder="Provide more details about your question..." rows="4"></textarea>
+            <button onclick="submitQuestion()">Post Question</button>
+        </div>
+
+        <div class="questions-list" id="questionsList">
+            <!-- Questions will be dynamically populated here -->
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api';
+
+        async function renderQuestions() {
+            try {
+                const response = await fetch(`${API_URL}/questions`);
+                const questions = await response.json();
+                const questionsList = document.getElementById('questionsList');
+                
+                questionsList.innerHTML = '';
+                questions.sort((a, b) => b.timestamp - a.timestamp);
+        
+                questions.forEach(question => {
+                    const questionElement = document.createElement('div');
+                    questionElement.classList.add('question-item');
+                    if (question.answered) {
+                        questionElement.classList.add('answered');
+                    }
+        
+                    const date = new Date(question.timestamp);
+                    questionElement.innerHTML = `
+                        <div class="timestamp">${date.toLocaleDateString()} ${date.toLocaleTimeString()}</div>
+                        <h3>${question.title}</h3>
+                        <p>${question.description}</p>
+                        ${question.answered ? `<div class="answer"><strong>Answer:</strong> ${question.answer}</div>` : ''}
+                        <button onclick="showAnswerForm(${question.id})">
+                            ${question.answered ? 'Edit Answer' : 'Add Answer'}
+                        </button>
+                        <div class="answer-form" id="answerForm-${question.id}">
+                            <input type="password" class="password-input" id="password-${question.id}" placeholder="Enter password to answer">
+                            <textarea id="answerText-${question.id}" placeholder="Type your answer here" rows="4"></textarea>
+                            <button onclick="submitAnswer(${question.id})">Submit Answer</button>
+                            <div class="error-message" id="error-${question.id}"></div>
+                        </div>
+                    `;
+        
+                    questionsList.appendChild(questionElement);
+                });
+            } catch (error) {
+                console.error('Error fetching questions:', error);
+            }
+        }
+        
+        async function submitQuestion() {
+            const title = document.getElementById('questionTitle').value;
+            const description = document.getElementById('questionDescription').value;
+        
+            if (title && description) {
+                try {
+                    const response = await fetch(`${API_URL}/questions`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ title, description })
+                    });
+        
+                    if (response.ok) {
+                        document.getElementById('questionTitle').value = '';
+                        document.getElementById('questionDescription').value = '';
+                        renderQuestions();
+                    }
+                } catch (error) {
+                    console.error('Error submitting question:', error);
+                }
+            } else {
+                alert('Please fill in both title and description');
+            }
+        }
+        
+        function showAnswerForm(questionId) {
+            const answerForm = document.getElementById(`answerForm-${questionId}`);
+            answerForm.style.display = answerForm.style.display === 'block' ? 'none' : 'block';
+        }
+        
+        async function submitAnswer(questionId) {
+            const password = document.getElementById(`password-${questionId}`).value;
+            const answerText = document.getElementById(`answerText-${questionId}`).value;
+            const errorElement = document.getElementById(`error-${questionId}`);
+            
+            if (!password || !answerText) {
+                errorElement.textContent = 'Please enter both password and answer';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/questions/${questionId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        answer: answerText,
+                        password: password
+                    })
+                });
+        
+                if (response.ok) {
+                    renderQuestions();
+                } else {
+                    const data = await response.json();
+                    errorElement.textContent = data.message || 'Error submitting answer';
+                }
+            } catch (error) {
+                errorElement.textContent = 'Error submitting answer';
+                console.error('Error submitting answer:', error);
+            }
+        }
+        
+        renderQuestions();
+    </script>
+</body>
+</html>
